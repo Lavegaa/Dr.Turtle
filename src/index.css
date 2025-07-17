@@ -1,68 +1,124 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-@layer base {
-  * {
-    @apply border-border;
-  }
+@theme {
+  --color-turtle-green: #10B981;
+  --color-turtle-orange: #F59E0B;
+  --color-turtle-red: #EF4444;
+  --color-turtle-blue: #3B82F6;
+  --color-turtle-gray: #6B7280;
   
-  body {
-    @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
-  }
+  --font-family-sans: Inter, system-ui, sans-serif;
+  
+  --shadow-turtle: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-turtle-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
-@layer components {
-  .camera-container {
-    @apply relative overflow-hidden rounded-lg bg-gray-900;
-  }
-  
-  .pose-overlay {
-    @apply absolute inset-0 pointer-events-none;
-  }
-  
-  .notification-modal {
-    @apply fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm;
-  }
-  
-  .status-indicator {
-    @apply inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium;
-  }
-  
-  .status-good {
-    @apply bg-turtle-green/20 text-turtle-green border border-turtle-green/30;
-  }
-  
-  .status-warning {
-    @apply bg-turtle-orange/20 text-turtle-orange border border-turtle-orange/30;
-  }
-  
-  .status-bad {
-    @apply bg-turtle-red/20 text-turtle-red border border-turtle-red/30;
-  }
-  
-  .btn-primary {
-    @apply bg-turtle-blue text-white hover:bg-turtle-blue/90 px-4 py-2 rounded-lg transition-colors;
-  }
-  
-  .btn-secondary {
-    @apply bg-gray-200 text-gray-800 hover:bg-gray-300 px-4 py-2 rounded-lg transition-colors;
-  }
-  
-  .card {
-    @apply bg-white rounded-xl shadow-turtle border border-gray-200;
-  }
-  
-  .input-range {
-    @apply w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer;
-  }
-  
-  .input-range::-webkit-slider-thumb {
-    @apply appearance-none w-4 h-4 bg-turtle-blue rounded-full cursor-pointer;
-  }
-  
-  .input-range::-moz-range-thumb {
-    @apply w-4 h-4 bg-turtle-blue rounded-full cursor-pointer border-0;
-  }
+.camera-container {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  background-color: #111827;
+}
+
+.pose-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.notification-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.status-good {
+  background-color: rgba(16, 185, 129, 0.2);
+  color: var(--color-turtle-green);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.status-warning {
+  background-color: rgba(245, 158, 11, 0.2);
+  color: var(--color-turtle-orange);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.status-bad {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: var(--color-turtle-red);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.btn-primary {
+  background-color: var(--color-turtle-blue);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+  background-color: rgba(59, 130, 246, 0.9);
+}
+
+.btn-secondary {
+  background-color: #e5e7eb;
+  color: #1f2937;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s;
+}
+
+.btn-secondary:hover {
+  background-color: #d1d5db;
+}
+
+.card {
+  background-color: white;
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-turtle);
+  border: 1px solid #e5e7eb;
+}
+
+.input-range {
+  width: 100%;
+  height: 0.5rem;
+  background-color: #e5e7eb;
+  border-radius: 0.5rem;
+  appearance: none;
+  cursor: pointer;
+}
+
+.input-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 1rem;
+  height: 1rem;
+  background-color: var(--color-turtle-blue);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.input-range::-moz-range-thumb {
+  width: 1rem;
+  height: 1rem;
+  background-color: var(--color-turtle-blue);
+  border-radius: 50%;
+  cursor: pointer;
+  border: 0;
 }
