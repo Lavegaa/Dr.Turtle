@@ -14,7 +14,6 @@ export class PostureDetector {
       );
 
       // GPU 초기화 시도, 실패 시 CPU로 폴백
-      let delegate = 'GPU';
       let poseLandmarker: PoseLandmarker | null = null;
       
       try {
@@ -30,10 +29,8 @@ export class PostureDetector {
           minTrackingConfidence: 0.5,
           outputSegmentationMasks: false
         });
-        console.log('MediaPipe GPU 초기화 성공');
-      } catch (gpuError) {
-        console.warn('GPU 초기화 실패, CPU로 폴백:', gpuError);
-        delegate = 'CPU';
+      } catch (error) {
+        console.error('GPU 초기화 실패:', error);
         poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
           baseOptions: {
             modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task',
@@ -46,12 +43,10 @@ export class PostureDetector {
           minTrackingConfidence: 0.5,
           outputSegmentationMasks: false
         });
-        console.log('MediaPipe CPU 초기화 성공');
       }
 
       this.poseLandmarker = poseLandmarker;
       this.isInitialized = true;
-      console.log(`MediaPipe Pose 초기화 완료 (${delegate})`);
     } catch (error) {
       console.error('MediaPipe 초기화 실패:', error);
       throw error;
@@ -63,6 +58,19 @@ export class PostureDetector {
       return null;
     }
 
+    // 비디오 준비 상태 확인
+    if (!videoElement || 
+        videoElement.readyState < 2 || // HAVE_CURRENT_DATA 미만
+        videoElement.videoWidth === 0 || 
+        videoElement.videoHeight === 0 ||
+        videoElement.paused ||
+        videoElement.ended ||
+        !videoElement.srcObject) {
+      return null;
+    }
+
+    let hasROIError = false;
+    
     try {
       this.isProcessing = true;
       const startTimeMs = performance.now();
@@ -88,9 +96,23 @@ export class PostureDetector {
       return null;
     } catch (error) {
       console.error('포즈 감지 실패:', error);
+      
+      // MediaPipe ROI 에러 체크
+      if (error instanceof Error && error.message.includes('ROI width and height must be > 0')) {
+        hasROIError = true;
+      }
+      
       return null;
     } finally {
-      this.isProcessing = false;
+      // ROI 에러가 아닌 경우에만 즉시 isProcessing 해제
+      if (!hasROIError) {
+        this.isProcessing = false;
+      } else {
+        // ROI 에러인 경우 1초 후 해제
+        setTimeout(() => {
+          this.isProcessing = false;
+        }, 1000);
+      }
     }
   }
 
@@ -180,11 +202,6 @@ export class PostureDetector {
         visibility: Math.min(leftShoulder.visibility ?? 0, rightShoulder.visibility ?? 0)
       };
       
-      console.log('어깨 중점:', {
-        왼어깨: { x: leftShoulder.x, y: leftShoulder.y },
-        오른어깨: { x: rightShoulder.x, y: rightShoulder.y },
-        중점: { x: shoulderCenter.x, y: shoulderCenter.y }
-      });
     }
 
     // 랜드마크 시각화
@@ -192,12 +209,6 @@ export class PostureDetector {
       const landmark = landmarks[index];
       
       if (landmark) {
-        // 원시 좌표값 콘솔 출력
-        console.log(`${name} (${index}):`, {
-          raw: { x: landmark.x, y: landmark.y },
-          transformed: { x: transformX(landmark.x), y: transformY(landmark.y) },
-          visibility: landmark.visibility
-        });
         
         if ((landmark.visibility ?? 0) > 0.1) { // 임계값 낮춤
           const pixelX = transformX(landmark.x);
@@ -314,12 +325,6 @@ export class PostureDetector {
       ctx.arc(earX, earY, 40, startAngle, endAngle);
       ctx.stroke();
 
-      console.log(`목 각도 (${earSelection === 'left' ? '왼쪽' : earSelection === 'right' ? '오른쪽' : '자동'} 귀 기준):`, {
-        angleDegrees: angleDegrees.toFixed(1),
-        status: angleDegrees <= thresholds.severeThreshold ? '심한 거북목' : 
-                angleDegrees <= thresholds.mildThreshold ? '경미한 거북목' : '좋은 자세',
-        thresholds: `경미함(≤${thresholds.mildThreshold}°), 심함(≤${thresholds.severeThreshold}°)`
-      });
 
       // 각도 텍스트 표시
       ctx.fillStyle = '#FFFFFF';

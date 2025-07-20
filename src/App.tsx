@@ -9,7 +9,6 @@ function App() {
   // 에러 처리
   const handleError = useCallback((errorMessage: string) => {
     setError(errorMessage)
-    console.error('Dr.Turtle 에러:', errorMessage)
     
     // 5초 후 에러 메시지 자동 제거
     setTimeout(() => {
@@ -27,8 +26,8 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header 
-        onSettingsClick={() => console.log('Settings clicked')}
-        onStatsClick={() => console.log('Stats clicked')}
+        onSettingsClick={() => {}}
+        onStatsClick={() => {}}
       />
 
       {/* 에러 메시지 표시 */}

@@ -47,7 +47,6 @@ export const usePostureDetection = ({
         analyzerRef.current = new PostureAnalyzer();
         await detectorRef.current.initialize();
         setIsInitialized(true);
-        console.log('🎯 MediaPipe와 거북목 분석기 초기화 완료');
       } catch (error) {
         console.error('MediaPipe 초기화 실패:', error);
         onError('MediaPipe 초기화에 실패했습니다.');
@@ -69,6 +68,18 @@ export const usePostureDetection = ({
   // 단순 랜드마크 감지 및 시각화 루프
   const processFrame = useCallback(async () => {
     if (!videoElement || !detectorRef.current || !isActive) {
+      return;
+    }
+
+    // 비디오 준비 상태 엄격 확인
+    if (videoElement.readyState < 2 || 
+        videoElement.videoWidth === 0 || 
+        videoElement.videoHeight === 0 ||
+        videoElement.paused ||
+        videoElement.ended ||
+        !videoElement.srcObject) {
+      // 비디오가 준비되지 않았으면 다음 프레임에서 다시 시도
+      animationFrameRef.current = requestAnimationFrame(processFrame);
       return;
     }
 
@@ -131,7 +142,6 @@ export const usePostureDetection = ({
   // 감지 시작/중지
   useEffect(() => {
     if (isActive && isInitialized && videoElement) {
-      console.log('🚀 랜드마크 감지 시작');
       processFrame();
     } else if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);

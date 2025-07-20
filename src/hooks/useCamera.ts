@@ -54,16 +54,18 @@ export const useCamera = (config: CameraConfig = {
            video.currentTime > 0); // 실제로 재생되고 있는지 확인
   };
 
-  const startCamera = async () => {
+  const startCamera = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      // 기존 스트림이 있다면 정리
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        setStream(null);
-      }
+      // 기존 스트림이 있다면 정리 (현재 상태를 직접 확인)
+      setStream(prevStream => {
+        if (prevStream) {
+          prevStream.getTracks().forEach(track => track.stop());
+        }
+        return null;
+      });
 
       // 비디오 엘리먼트 초기화
       if (videoRef.current) {
@@ -128,9 +130,8 @@ export const useCamera = (config: CameraConfig = {
           }
           
           await videoRef.current.play();
-          console.log('비디오 재생 성공');
-        } catch (playError) {
-          console.warn('비디오 자동 재생 실패, 사용자 상호작용 필요:', playError);
+        } catch (error) {
+          console.error('비디오 재생 실패:', error);
           // 자동 재생 실패는 치명적이지 않음 (사용자가 나중에 클릭하면 재생됨)
         }
       }
@@ -138,26 +139,22 @@ export const useCamera = (config: CameraConfig = {
       setStream(mediaStream);
       setIsActive(true);
       
-      console.log('카메라 시작 성공:', {
-        width: videoRef.current?.videoWidth,
-        height: videoRef.current?.videoHeight,
-        readyState: videoRef.current?.readyState
-      });
-      
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '카메라 접근 실패';
       setError(errorMessage);
-      console.error('카메라 시작 실패:', err);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [config]);
 
   const stopCamera = useCallback(() => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-    }
+    // 현재 스트림 상태를 직접 확인하여 정리
+    setStream(prevStream => {
+      if (prevStream) {
+        prevStream.getTracks().forEach(track => track.stop());
+      }
+      return null;
+    });
     
     if (videoRef.current) {
       videoRef.current.pause();
@@ -166,7 +163,7 @@ export const useCamera = (config: CameraConfig = {
     }
     
     setIsActive(false);
-  }, [stream]);
+  }, []);
 
   useEffect(() => {
     return () => {

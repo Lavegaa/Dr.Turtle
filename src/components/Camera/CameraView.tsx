@@ -1,7 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useCamera } from '../../hooks/useCamera';
 import { usePostureDetection } from '../../hooks/usePostureDetection';
+import { FeedbackOrchestrator } from '../../services/FeedbackOrchestrator';
+import FeedbackOverlay from '../Feedback/FeedbackOverlay';
+import PostureStatusIndicator from '../Feedback/PostureStatusIndicator';
 import type { EarSelection, PostureThresholds } from '../../services/mediapipe/PostureAnalyzer';
+import type { NotificationSettings } from '../../types/feedback';
 
 interface CameraViewProps {
   isMonitoring: boolean;
@@ -19,6 +23,15 @@ export default function CameraView({
     mildThreshold: -1,
     severeThreshold: -3
   });
+  const [feedbackSettings, setFeedbackSettings] = useState<NotificationSettings>({
+    enabled: true,
+    sound: true,
+    browser: false,
+    frequency: 'medium',
+    volume: 70
+  });
+  
+  const feedbackOrchestratorRef = useRef<FeedbackOrchestrator | null>(null);
   const {
     videoRef,
     isLoading: cameraLoading,
@@ -45,14 +58,52 @@ export default function CameraView({
     thresholds
   });
 
-  // 카메라 시작/중지
+  // 카메라 시작/중지 (에러 시 무한 재시작 방지)
   useEffect(() => {
-    if (isMonitoring && !cameraActive) {
+    if (isMonitoring && !cameraActive && !cameraError && !cameraLoading) {
       startCamera();
     } else if (!isMonitoring && cameraActive) {
       stopCamera();
     }
-  }, [isMonitoring, cameraActive, startCamera, stopCamera]);
+  }, [isMonitoring, cameraActive, !!cameraError, cameraLoading, startCamera, stopCamera]);
+
+  // 피드백 시스템 초기화
+  useEffect(() => {
+    if (!feedbackOrchestratorRef.current) {
+      feedbackOrchestratorRef.current = new FeedbackOrchestrator(feedbackSettings);
+    }
+    
+    return () => {
+      if (feedbackOrchestratorRef.current) {
+        feedbackOrchestratorRef.current.stop();
+      }
+    };
+  }, []);
+
+  // 피드백 설정 업데이트
+  useEffect(() => {
+    if (feedbackOrchestratorRef.current) {
+      feedbackOrchestratorRef.current.updateSettings(feedbackSettings);
+    }
+  }, [feedbackSettings]);
+
+  // 모니터링 상태에 따른 피드백 시작/중지
+  useEffect(() => {
+    if (feedbackOrchestratorRef.current) {
+      if (isMonitoring && cameraActive) {
+        feedbackOrchestratorRef.current.start();
+      } else {
+        feedbackOrchestratorRef.current.stop();
+      }
+    }
+  }, [isMonitoring, cameraActive]);
+
+  // 거북목 분석 결과를 피드백 시스템에 전달
+  useEffect(() => {
+    if (feedbackOrchestratorRef.current && turtleNeckAnalysis && isMonitoring) {
+      feedbackOrchestratorRef.current.processPostureAnalysis(turtleNeckAnalysis);
+    }
+  }, [turtleNeckAnalysis, isMonitoring]);
 
   // 에러 처리
   useEffect(() => {
@@ -84,6 +135,13 @@ export default function CameraView({
   return (
     <div className="lg:col-span-2">
       <div className="card p-6">
+        {/* 자세 상태 표시기 */}
+        <PostureStatusIndicator 
+          analysis={turtleNeckAnalysis}
+          isActive={isMonitoring && cameraActive}
+          className="mb-4"
+        />
+
         <div className="camera-container aspect-video mb-4 relative">
           {/* 비디오 엘리먼트 */}
           <video
@@ -155,9 +213,116 @@ export default function CameraView({
             </div>
           )}
         </div>
+
+        {/* 피드백 오버레이 */}
+        <FeedbackOverlay isActive={isMonitoring && cameraActive} />
         
         {/* 설정 옵션들 */}
         <div className="mb-4 space-y-4">
+          {/* 피드백 설정 */}
+          <div className="text-center">
+            <div className="bg-purple-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-purple-900 mb-3">🔔 피드백 설정</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-purple-800">피드백 활성화</span>
+                  <button 
+                    className={`w-12 h-6 rounded-full relative transition-colors ${
+                      feedbackSettings.enabled ? 'bg-purple-500' : 'bg-gray-300'
+                    }`}
+                    onClick={() => setFeedbackSettings(prev => ({
+                      ...prev,
+                      enabled: !prev.enabled
+                    }))}
+                  >
+                    <div 
+                      className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                        feedbackSettings.enabled ? 'transform translate-x-7' : 'transform translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-purple-800">소리 알림</span>
+                  <button 
+                    className={`w-12 h-6 rounded-full relative transition-colors ${
+                      feedbackSettings.sound ? 'bg-purple-500' : 'bg-gray-300'
+                    }`}
+                    onClick={() => setFeedbackSettings(prev => ({
+                      ...prev,
+                      sound: !prev.sound
+                    }))}
+                  >
+                    <div 
+                      className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                        feedbackSettings.sound ? 'transform translate-x-7' : 'transform translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-purple-800">브라우저 알림</span>
+                  <button 
+                    className={`w-12 h-6 rounded-full relative transition-colors ${
+                      feedbackSettings.browser ? 'bg-purple-500' : 'bg-gray-300'
+                    }`}
+                    onClick={() => setFeedbackSettings(prev => ({
+                      ...prev,
+                      browser: !prev.browser
+                    }))}
+                  >
+                    <div 
+                      className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                        feedbackSettings.browser ? 'transform translate-x-7' : 'transform translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-purple-800">알림 빈도</span>
+                    <span className="text-purple-600">
+                      {feedbackSettings.frequency === 'low' ? '낮음' :
+                       feedbackSettings.frequency === 'medium' ? '보통' : '높음'}
+                    </span>
+                  </div>
+                  <select 
+                    value={feedbackSettings.frequency}
+                    onChange={(e) => setFeedbackSettings(prev => ({
+                      ...prev,
+                      frequency: e.target.value as 'low' | 'medium' | 'high'
+                    }))}
+                    className="w-full px-3 py-1 border border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                  >
+                    <option value="low">낮음 (덜 자주)</option>
+                    <option value="medium">보통</option>
+                    <option value="high">높음 (자주)</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-purple-800">음량</span>
+                    <span className="text-purple-600">{feedbackSettings.volume}%</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="100" 
+                    value={feedbackSettings.volume}
+                    onChange={(e) => setFeedbackSettings(prev => ({
+                      ...prev,
+                      volume: Number(e.target.value)
+                    }))}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
           {/* 귀 선택 옵션 */}
           <div className="text-center">
             <div className="bg-gray-100 p-4 rounded-lg">
