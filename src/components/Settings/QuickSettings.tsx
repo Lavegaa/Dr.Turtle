@@ -6,7 +6,11 @@ interface QuickSettingsProps {
     sound: boolean;
     sensitivity: number;
   };
-  onSettingsChange: (newSettings: any) => void;
+  onSettingsChange: (newSettings: {
+    notifications: boolean;
+    sound: boolean;
+    sensitivity: number;
+  }) => void;
 }
 
 export default function QuickSettings({ settings, onSettingsChange }: QuickSettingsProps) {

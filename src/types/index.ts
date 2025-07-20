@@ -1,15 +1,45 @@
 // 자세 분석 관련 타입
+export interface PostureMetrics {
+  // 기존 지표
+  cva: number;
+  distance: number;
+  shoulderLevel: number;
+  
+  // 새로운 다중 지표
+  hfd: number;              // Head Forward Distance
+  neckAngle: number;        // 목 기울기
+  shoulderAngle: number;    // 어깨 기울기
+  headTilt: number;         // 머리 기울기
+  
+  // 새로운 정렬 지표
+  chestNeckChinAlignment: number;  // 가슴-목-턱 정렬
+  
+  // 메타데이터
+  timestamp: number;
+  confidence: number;
+}
+
+export interface PostureAnalysis {
+  status: 'GOOD' | 'WARNING' | 'BAD';
+  metrics: PostureMetrics;
+  compositeScore: number;   // 0-100 종합 점수
+  improvements: string[];   // 개선 제안사항
+}
+
+// 자세 이력 추적용
+export interface PostureHistory {
+  timestamp: number;
+  metrics: PostureMetrics;
+  status: 'GOOD' | 'WARNING' | 'BAD';
+  duration: number;         // 해당 상태 지속 시간 (ms)
+}
+
+// 레거시 호환성을 위한 타입 (기존 코드 유지)
 export interface PostureData {
   cva: number;
   distance: number;
   shoulderLevel: number;
   timestamp: number;
-}
-
-export interface PostureAnalysis {
-  status: 'GOOD' | 'WARNING' | 'BAD';
-  score: PostureData;
-  confidence: number;
 }
 
 // 알림 관련 타입
